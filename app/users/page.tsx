@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Search, 
@@ -90,9 +90,7 @@ const dummyUsers: UserProfile[] = [
 // Framer Motion variants for staggered list and cards
 const containerVariants = {
   hidden: {},
-  show: {
-    transition: { staggerChildren: 0.2 },
-  },
+  show: { transition: { staggerChildren: 0.2 } },
 };
 
 const cardVariants = {
@@ -111,7 +109,9 @@ export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [showThumbsUp, setShowThumbsUp] = useState(false);
-  
+  // A state variable to force re-mounting cards so that the border resets
+  const [resetKey, setResetKey] = useState(0);
+
   // Upvote counts mapped by user id
   const [upvoteCounts, setUpvoteCounts] = useState<Record<string, number>>(() => {
     const initialCounts: Record<string, number> = {};
@@ -120,20 +120,26 @@ export default function UsersPage() {
     });
     return initialCounts;
   });
-  
+
   // Track if the current viewer has upvoted a user
   const [upvoteStatus, setUpvoteStatus] = useState<Record<string, boolean>>({});
 
+  // Filter users based on search query
   const filteredUsers = dummyUsers.filter(user =>
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Sort the filtered users in descending order of upvotes
+  const sortedUsers = [...filteredUsers].sort(
+    (a, b) => (upvoteCounts[b.id] || 0) - (upvoteCounts[a.id] || 0)
   );
 
   const handleUpvote = () => {
     if (selectedUser) {
       const userId = selectedUser.id;
       const alreadyUpvoted = upvoteStatus[userId] || false;
-      
+
       // Update upvote count based on current status
       setUpvoteCounts(prev => {
         const prevCount = prev[userId] || 0;
@@ -142,20 +148,21 @@ export default function UsersPage() {
           [userId]: alreadyUpvoted ? prevCount - 1 : prevCount + 1,
         };
       });
-      
+
       // Toggle upvote status
       setUpvoteStatus(prev => ({
         ...prev,
         [userId]: !alreadyUpvoted,
       }));
-      
-      // Only show thumbs up animation when adding an upvote (not removing it)
+
+      // Force reset of card keys (thus remounting them and restarting animations)
+      setResetKey(prev => prev + 1);
+
+      // Only show thumbs up animation when adding an upvote (not when removing it)
       if (!alreadyUpvoted) {
         setShowThumbsUp(true);
-        // Hide the ThumbsUp icon after 1 second
         setTimeout(() => setShowThumbsUp(false), 1000);
       } else {
-        // If un-upvoting, immediately ensure the icon is hidden
         setShowThumbsUp(false);
       }
     }
@@ -231,16 +238,18 @@ export default function UsersPage() {
           </div>
         </div>
 
-        {/* User Grid with Staggered Animation */}
+        {/* User Grid with Staggered Animation (sorted by upvotes) */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="show"
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
-          {filteredUsers.map(user => (
+          {sortedUsers.map(user => (
             <motion.div
-              key={user.id}
+              // Combine user.id with resetKey to force remount on sorting changes
+              key={`${user.id}-${resetKey}`}
+              layout
               variants={cardVariants}
               whileHover={{ scale: 1.05, y: -5 }}
               className="animated-border cursor-pointer transition-all duration-300 relative"
@@ -424,7 +433,7 @@ export default function UsersPage() {
                       {/* End of modal content */}
                     </div>
                   </ScrollArea>
-                  {/* Animated ThumbsUp icon */}
+                  {/* Upvote Button and Animated Icon */}
                   <AnimatePresence>
                     {showThumbsUp && (
                       <motion.div
@@ -438,7 +447,6 @@ export default function UsersPage() {
                       </motion.div>
                     )}
                   </AnimatePresence>
-                  {/* Upvote button positioned at the bottom right with count */}
                   <motion.button
                     whileTap={{ scale: 0.9 }}
                     onClick={handleUpvote}
