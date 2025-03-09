@@ -21,7 +21,6 @@ import {
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Avatar } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Dummy data type
@@ -92,9 +91,7 @@ const dummyUsers: UserProfile[] = [
 const containerVariants = {
   hidden: {},
   show: {
-    transition: {
-      staggerChildren: 0.2,
-    },
+    transition: { staggerChildren: 0.2 },
   },
 };
 
@@ -113,41 +110,74 @@ const modalVariants = {
 export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [showThumbsUp, setShowThumbsUp] = useState(false);
+  
+  // Upvote counts mapped by user id
+  const [upvoteCounts, setUpvoteCounts] = useState<Record<string, number>>(() => {
+    const initialCounts: Record<string, number> = {};
+    dummyUsers.forEach(user => {
+      initialCounts[user.id] = 0;
+    });
+    return initialCounts;
+  });
+  
+  // Track if the current viewer has upvoted a user
+  const [upvoteStatus, setUpvoteStatus] = useState<Record<string, boolean>>({});
 
   const filteredUsers = dummyUsers.filter(user =>
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleUpvote = () => {
+    if (selectedUser) {
+      const userId = selectedUser.id;
+      const alreadyUpvoted = upvoteStatus[userId] || false;
+      
+      // Update upvote count based on current status
+      setUpvoteCounts(prev => {
+        const prevCount = prev[userId] || 0;
+        return {
+          ...prev,
+          [userId]: alreadyUpvoted ? prevCount - 1 : prevCount + 1,
+        };
+      });
+      
+      // Toggle upvote status
+      setUpvoteStatus(prev => ({
+        ...prev,
+        [userId]: !alreadyUpvoted,
+      }));
+      
+      // Only show thumbs up animation when adding an upvote (not removing it)
+      if (!alreadyUpvoted) {
+        setShowThumbsUp(true);
+        // Hide the ThumbsUp icon after 1 second
+        setTimeout(() => setShowThumbsUp(false), 1000);
+      } else {
+        // If un-upvoting, immediately ensure the icon is hidden
+        setShowThumbsUp(false);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black p-6">
       {/* CSS for the moving border animation */}
       <style jsx global>{`
         @keyframes borderAnimation {
-          0% {
-            clip-path: inset(0 0 calc(100% - 2px) 0);
-          }
-          25% {
-            clip-path: inset(0 0 0 calc(100% - 2px));
-          }
-          50% {
-            clip-path: inset(calc(100% - 2px) 0 0 0);
-          }
-          75% {
-            clip-path: inset(0 calc(100% - 2px) 0 0);
-          }
-          100% {
-            clip-path: inset(0 0 calc(100% - 2px) 0);
-          }
+          0% { clip-path: inset(0 0 calc(100% - 2px) 0); }
+          25% { clip-path: inset(0 0 0 calc(100% - 2px)); }
+          50% { clip-path: inset(calc(100% - 2px) 0 0 0); }
+          75% { clip-path: inset(0 calc(100% - 2px) 0 0); }
+          100% { clip-path: inset(0 0 calc(100% - 2px) 0); }
         }
-
         .animated-border {
           position: relative;
           border-radius: 0.5rem;
           z-index: 0;
           overflow: hidden;
         }
-
         .animated-border::before {
           content: '';
           position: absolute;
@@ -156,14 +186,11 @@ export default function UsersPage() {
           right: 0;
           bottom: 0;
           border: 2px solid #00E0F3;
-          // border-radius: 0.5rem;
           animation: borderAnimation 3s linear infinite;
           z-index: 10;
         }
-
         .card-content {
-          background: #1C1F24; /* Updated to grey */
-          // border-radius: 20px;
+          background: #1C1F24;
           height: 100%;
           width: 100%;
           position: relative;
@@ -227,6 +254,9 @@ export default function UsersPage() {
                   <div>
                     <h3 className="text-lg font-semibold text-white">{user.name}</h3>
                     <p className="text-gray-300">{user.email}</p>
+                    <div className="mt-2 text-white text-xs">
+                      Upvotes: {upvoteCounts[user.id] || 0}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -244,7 +274,7 @@ export default function UsersPage() {
                   initial="hidden"
                   animate="visible"
                   exit="exit"
-                  className="bg-black rounded-lg p-4"
+                  className="bg-black relative rounded-lg p-4"
                 >
                   <ScrollArea className="h-[80vh]">
                     <div className="space-y-6 p-4">
@@ -257,8 +287,8 @@ export default function UsersPage() {
                           <h2 className="text-2xl font-bold" style={{ color: "#2AD7DB" }}>
                             {selectedUser.name}
                           </h2>
-                          <p className="text-[#374151]">{selectedUser.age} years old</p>
-                          <p className="text-[#374151] flex items-center">
+                          <p className="text-[#aab3c2]">{selectedUser.age} years old</p>
+                          <p className="text-[#aab3c2] flex items-center">
                             <Building2 className="mr-2" size={16} />
                             {selectedUser.collegeName}
                           </p>
@@ -267,11 +297,11 @@ export default function UsersPage() {
 
                       {/* Contact Information */}
                       <div className="space-y-3">
-                        <div className="flex items-center space-x-2 text-[#374151]">
+                        <div className="flex items-center space-x-2 text-[#aab3c2]">
                           <Mail size={16} />
                           <span>{selectedUser.email}</span>
                         </div>
-                        <div className="flex items-center space-x-2 text-[#374151]">
+                        <div className="flex items-center space-x-2 text-[#aab3c2]">
                           <Phone size={16} />
                           <span>{selectedUser.phone}</span>
                         </div>
@@ -280,7 +310,7 @@ export default function UsersPage() {
                       {/* Bio */}
                       <div>
                         <h3 className="text-lg font-semibold mb-2">About</h3>
-                        <p className="text-[#374151]">{selectedUser.shortBio}</p>
+                        <p className="text-[#aab3c2]">{selectedUser.shortBio}</p>
                       </div>
 
                       {/* Links & Profiles */}
@@ -391,22 +421,31 @@ export default function UsersPage() {
                         </div>
                       </div>
 
-                      {/* Referral Code Row with Upvote Button */}
-                      {selectedUser.referralCode && (
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="text-lg font-semibold mb-2">Referral Code</h3>
-                            <Badge variant="outline" className="text-[#27C8CB] border-[#27C8CB]">
-                              {selectedUser.referralCode}
-                            </Badge>
-                          </div>
-                          <button className="p-2 rounded-full bg-[#27C8CB] hover:bg-[#2AD7DB] transition-all duration-200">
-                            <ThumbsUp size={20} className="text-black" />
-                          </button>
-                        </div>
-                      )}
+                      {/* End of modal content */}
                     </div>
                   </ScrollArea>
+                  {/* Animated ThumbsUp icon */}
+                  <AnimatePresence>
+                    {showThumbsUp && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.5 }}
+                        animate={{ opacity: 1, y: -20, scale: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.8 }}
+                        className="absolute bottom-16 right-12"
+                      >
+                        <ThumbsUp size={24} className="text-white" />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  {/* Upvote button positioned at the bottom right with count */}
+                  <motion.button
+                    whileTap={{ scale: 0.9 }}
+                    onClick={handleUpvote}
+                    className="absolute bottom-0 right-10 px-4 py-2 rounded-full bg-[#27C8CB] hover:bg-[#2AD7DB] transition-all duration-200"
+                  >
+                    Upvote ({selectedUser ? upvoteCounts[selectedUser.id] : 0})
+                  </motion.button>
                 </motion.div>
               )}
             </AnimatePresence>
