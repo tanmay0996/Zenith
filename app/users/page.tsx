@@ -121,6 +121,56 @@ export default function UsersPage() {
 
   return (
     <div className="min-h-screen bg-black p-6">
+      {/* CSS for the moving border animation */}
+      <style jsx global>{`
+        @keyframes borderAnimation {
+          0% {
+            clip-path: inset(0 0 calc(100% - 2px) 0);
+          }
+          25% {
+            clip-path: inset(0 0 0 calc(100% - 2px));
+          }
+          50% {
+            clip-path: inset(calc(100% - 2px) 0 0 0);
+          }
+          75% {
+            clip-path: inset(0 calc(100% - 2px) 0 0);
+          }
+          100% {
+            clip-path: inset(0 0 calc(100% - 2px) 0);
+          }
+        }
+
+        .animated-border {
+          position: relative;
+          border-radius: 0.5rem;
+          z-index: 0;
+          overflow: hidden;
+        }
+
+        .animated-border::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          border: 2px solid #00E0F3;
+          // border-radius: 0.5rem;
+          animation: borderAnimation 3s linear infinite;
+          z-index: 10;
+        }
+
+        .card-content {
+          background: #1C1F24; /* Updated to grey */
+          // border-radius: 20px;
+          height: 100%;
+          width: 100%;
+          position: relative;
+          z-index: 1;
+        }
+      `}</style>
+
       <div className="max-w-7xl mx-auto">
         {/* Glitch Heading */}
         <div className="relative mb-8">
@@ -166,16 +216,18 @@ export default function UsersPage() {
               key={user.id}
               variants={cardVariants}
               whileHover={{ scale: 1.05, y: -5 }}
-              className="circulating-border bg-[#5a7db9] rounded-lg shadow-lg cursor-pointer p-6 transition-all duration-300 relative"
+              className="animated-border cursor-pointer transition-all duration-300 relative"
               onClick={() => setSelectedUser(user)}
             >
-              <div className="flex items-center space-x-4">
-                <Avatar className="h-16 w-16">
-                  <img src={user.profilePic} alt={user.name} className="object-cover" />
-                </Avatar>
-                <div>
-                  <h3 className="text-lg font-semibold text-white">{user.name}</h3>
-                  <p className="text-gray-300">{user.email}</p>
+              <div className="card-content p-6">
+                <div className="flex items-center space-x-4">
+                  <Avatar className="h-16 w-16">
+                    <img src={user.profilePic} alt={user.name} className="object-cover" />
+                  </Avatar>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">{user.name}</h3>
+                    <p className="text-gray-300">{user.email}</p>
+                  </div>
                 </div>
               </div>
             </motion.div>
